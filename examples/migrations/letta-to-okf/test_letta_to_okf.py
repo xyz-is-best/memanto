@@ -13,7 +13,6 @@ Verifies:
 from __future__ import annotations
 
 import json
-import subprocess
 import sys
 from pathlib import Path
 from typing import Any
@@ -38,8 +37,9 @@ from adapter import (  # noqa: E402
     main,
     normalize_timestamp,
 )
-from memanto.cli.migrate.mappers import map_okf
-from memanto.cli.migrate.okf_loader import load_okf_bundle
+
+from memanto.cli.migrate.mappers import map_okf  # noqa: E402
+from memanto.cli.migrate.okf_loader import load_okf_bundle  # noqa: E402
 
 FIXTURES_PATH = _ADAPTER_DIR / "fixtures" / "sample_letta_export.json"
 
@@ -85,9 +85,9 @@ class TestLettaSampleFixture:
         per_type = summary["per_type_counts"]
         assert per_type["observation"] == 4
         assert per_type["instruction"] == 1  # persona
-        assert per_type["preference"] == 1   # human
-        assert per_type["fact"] == 1         # guidelines
-        assert per_type["context"] == 3      # recall messages
+        assert per_type["preference"] == 1  # human
+        assert per_type["fact"] == 1  # guidelines
+        assert per_type["context"] == 3  # recall messages
 
 
 class TestArchivalMemoryConversion:
@@ -228,7 +228,9 @@ class TestCoreMemoryMapping:
         assert "core:human" in tags
         assert "core:persona" in tags
 
-    def test_core_tags_propagated_to_all_documents(self, sample_export_data: dict[str, Any]):
+    def test_core_tags_propagated_to_all_documents(
+        self, sample_export_data: dict[str, Any]
+    ):
         adapter = LettaOKFAdapter(sample_export_data)
         docs = adapter.convert()
 
@@ -340,8 +342,12 @@ class TestResilienceAndMalformedInputs:
         # Epoch seconds
         assert normalize_timestamp(1750000000) == "2025-06-15T15:06:40Z"
         # ISO string with offset
-        assert normalize_timestamp("2026-07-02T10:15:30+00:00") == "2026-07-02T10:15:30Z"
-        assert normalize_timestamp("2026-07-02T12:15:30+02:00") == "2026-07-02T10:15:30Z"
+        assert (
+            normalize_timestamp("2026-07-02T10:15:30+00:00") == "2026-07-02T10:15:30Z"
+        )
+        assert (
+            normalize_timestamp("2026-07-02T12:15:30+02:00") == "2026-07-02T10:15:30Z"
+        )
         # ISO string with Z
         assert normalize_timestamp("2026-07-02T10:15:30Z") == "2026-07-02T10:15:30Z"
         # Invalid timestamps should return None safely
@@ -354,7 +360,11 @@ class TestResilienceAndMalformedInputs:
         assert _sanitize_tags(None) == []
         assert _sanitize_tags("") == []
         assert _sanitize_tags(["tag1", "tag2", "tag1", None, ""]) == ["tag1", "tag2"]
-        assert _sanitize_tags("alpha, beta, gamma , alpha") == ["alpha", "beta", "gamma"]
+        assert _sanitize_tags("alpha, beta, gamma , alpha") == [
+            "alpha",
+            "beta",
+            "gamma",
+        ]
         assert _sanitize_tags({"s1", "s2"}) in (["s1", "s2"], ["s2", "s1"])
         assert _sanitize_tags(123) == ["123"]
 
@@ -368,10 +378,14 @@ class TestResilienceAndMalformedInputs:
 class TestBundleAndDirectoryExport:
     """Verifies directory writing, JSON manifest generation, and Memanto import compatibility."""
 
-    def test_export_to_directory_structure(self, sample_export_data: dict[str, Any], tmp_path: Path):
+    def test_export_to_directory_structure(
+        self, sample_export_data: dict[str, Any], tmp_path: Path
+    ):
         output_dir = tmp_path / "letta_okf_bundle"
         adapter = LettaOKFAdapter(sample_export_data)
         bundle_manifest = adapter.export_to_directory(output_dir)
+        assert bundle_manifest["okf_version"] == OKF_VERSION
+        assert "summary" in bundle_manifest
 
         assert output_dir.exists()
         assert (output_dir / "bundle.json").exists()

@@ -17,7 +17,6 @@ Design Principles:
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 import os
 import re
@@ -46,7 +45,11 @@ MAX_TITLE_CHARS = 90
 
 def _slugify(value: str) -> str:
     """Create a safe, deterministic filename slug from a string."""
-    text = unicodedata.normalize("NFKD", str(value)).encode("ascii", "ignore").decode("ascii")
+    text = (
+        unicodedata.normalize("NFKD", str(value))
+        .encode("ascii", "ignore")
+        .decode("ascii")
+    )
     slug = re.sub(r"[^\w\s-]", "", text).strip().lower()
     slug = re.sub(r"[-\s]+", "-", slug)
     return slug[:60] or "item"
@@ -197,7 +200,7 @@ class OKFDocument:
 
     def to_dict(self) -> dict[str, Any]:
         """Convert to standard OKF document dictionary."""
-        footer_items = [
+        footer_items: list[tuple[str, Any]] = [
             ("Source", f"letta:{self.source_ref}" if self.source_ref else "letta"),
             ("Tags", self.tags),
         ]
@@ -208,7 +211,9 @@ class OKFDocument:
 
         content_with_footer = self.body + _format_supporting_data(footer_items)
         if len(content_with_footer) > MAX_PORTABLE_BODY_CHARS:
-            content_with_footer = content_with_footer[: MAX_PORTABLE_BODY_CHARS - 3] + "..."
+            content_with_footer = (
+                content_with_footer[: MAX_PORTABLE_BODY_CHARS - 3] + "..."
+            )
 
         doc: dict[str, Any] = {
             "id": self.doc_id,
@@ -224,7 +229,9 @@ class OKFDocument:
                 "source": "letta",
                 "source_ref": self.source_ref,
                 "provenance": "imported",
-                "updated_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
+                "updated_at": datetime.now(timezone.utc)
+                .isoformat()
+                .replace("+00:00", "Z"),
                 "metadata": self.metadata,
             },
         }
@@ -259,8 +266,10 @@ class LettaOKFAdapter:
         if not isinstance(export_data, dict):
             raise MigrationError("Export data must be a valid JSON dictionary")
         self.raw = export_data
-        self.agent = export_data.get("agent") if isinstance(export_data.get("agent"), dict) else {}
-        self.core_memory = export_data.get("core_memory") or export_data.get("memory") or {}
+        agent_val = export_data.get("agent")
+        self.agent: dict[str, Any] = agent_val if isinstance(agent_val, dict) else {}
+        core_mem = export_data.get("core_memory") or export_data.get("memory")
+        self.core_memory: dict[str, Any] = core_mem if isinstance(core_mem, dict) else {}
         self.passages = self._extract_passages()
         self.recall = self._extract_recall()
 
@@ -318,22 +327,30 @@ class LettaOKFAdapter:
             if isinstance(raw_blocks, list):
                 for b in raw_blocks:
                     if isinstance(b, dict) and b.get("value"):
-                        blocks.append({
-                            "name": str(b.get("name") or "core_block"),
-                            "label": str(b.get("label") or b.get("name") or "Block"),
-                            "value": str(b.get("value")).strip(),
-                        })
+                        blocks.append(
+                            {
+                                "name": str(b.get("name") or "core_block"),
+                                "label": str(
+                                    b.get("label") or b.get("name") or "Block"
+                                ),
+                                "value": str(b.get("value")).strip(),
+                            }
+                        )
 
             # Check direct 'human' and 'persona' keys if not in blocks
             existing_names = {b["name"] for b in blocks}
             if "human" in self.core_memory and "human" not in existing_names:
                 val = str(self.core_memory["human"] or "").strip()
                 if val:
-                    blocks.append({"name": "human", "label": "User Profile", "value": val})
+                    blocks.append(
+                        {"name": "human", "label": "User Profile", "value": val}
+                    )
             if "persona" in self.core_memory and "persona" not in existing_names:
                 val = str(self.core_memory["persona"] or "").strip()
                 if val:
-                    blocks.append({"name": "persona", "label": "Agent Persona", "value": val})
+                    blocks.append(
+                        {"name": "persona", "label": "Agent Persona", "value": val}
+                    )
 
         for block in blocks:
             name = block["name"]
@@ -363,7 +380,9 @@ class LettaOKFAdapter:
                     title=title,
                     body=val,
                     tags=merged_tags,
-                    timestamp=normalize_timestamp(self.agent.get("created_at") or self.raw.get("exported_at")),
+                    timestamp=normalize_timestamp(
+                        self.agent.get("created_at") or self.raw.get("exported_at")
+                    ),
                     source_ref=f"core_memory:{name}",
                     metadata={"block_name": name, "label": block["label"]},
                     confidence=1.0,
@@ -384,14 +403,24 @@ class LettaOKFAdapter:
             passage_id = passage.get("id") or f"passage-{idx:04d}"
             # Construct a clean human title from the first line
             first_line = text.splitlines()[0].strip()
-            title = first_line[:MAX_TITLE_CHARS] if len(first_line) > 10 else f"Letta passage {passage_id[:12]}"
+            title = (
+                first_line[:MAX_TITLE_CHARS]
+                if len(first_line) > 10
+                else f"Letta passage {passage_id[:12]}"
+            )
 
             # Tags integration
             source_tags = _sanitize_tags(passage.get("tags"))
             combined_tags = list(dict.fromkeys([*base_tags, *source_tags, "archival"]))
 
-            timestamp = normalize_timestamp(passage.get("created_at") or passage.get("createdAt"))
-            meta = passage.get("metadata") if isinstance(passage.get("metadata"), dict) else {}
+            timestamp = normalize_timestamp(
+                passage.get("created_at") or passage.get("createdAt")
+            )
+            meta = (
+                passage.get("metadata")
+                if isinstance(passage.get("metadata"), dict)
+                else {}
+            )
 
             docs.append(
                 OKFDocument(
@@ -427,7 +456,9 @@ class LettaOKFAdapter:
             role_tag = f"role:{role}" if role else "role:unknown"
             combined_tags = list(dict.fromkeys([*base_tags, "recall", role_tag]))
 
-            timestamp = normalize_timestamp(msg.get("created_at") or msg.get("createdAt") or msg.get("timestamp"))
+            timestamp = normalize_timestamp(
+                msg.get("created_at") or msg.get("createdAt") or msg.get("timestamp")
+            )
 
             docs.append(
                 OKFDocument(
@@ -476,14 +507,22 @@ class LettaOKFAdapter:
     def export_to_directory(self, output_dir: Path | str) -> dict[str, Any]:
         """Write the complete OKF bundle directory to disk (Markdown + JSON)."""
         out_path = Path(output_dir)
-        staging = Path(tempfile.mkdtemp(prefix=f".{out_path.name}.tmp-", dir=str(out_path.parent if out_path.parent.exists() else ".")))
+        staging = Path(
+            tempfile.mkdtemp(
+                prefix=f".{out_path.name}.tmp-",
+                dir=str(out_path.parent if out_path.parent.exists() else "."),
+            )
+        )
 
         try:
             bundle_json = self.to_json_bundle()
             docs = self.convert()
 
             # Write bundle.json manifest
-            (staging / "bundle.json").write_text(json.dumps(bundle_json, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+            (staging / "bundle.json").write_text(
+                json.dumps(bundle_json, indent=2, ensure_ascii=False) + "\n",
+                encoding="utf-8",
+            )
 
             # Write memory markdown files grouped by type
             memories_dir = staging / "memories"
@@ -512,7 +551,9 @@ class LettaOKFAdapter:
                 "",
             ]
             for m_type in sorted(type_counts):
-                index_lines.append(f"- [{m_type}](memories/{m_type}/) — {type_counts[m_type]} document(s)")
+                index_lines.append(
+                    f"- [{m_type}](memories/{m_type}/) — {type_counts[m_type]} document(s)"
+                )
             index_lines.append("")
             (staging / "index.md").write_text("\n".join(index_lines), encoding="utf-8")
 
@@ -555,7 +596,10 @@ def convert_letta_to_okf_bundle(
         out = Path(output_path)
         if out.suffix.lower() == ".json":
             out.parent.mkdir(parents=True, exist_ok=True)
-            out.write_text(json.dumps(bundle, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+            out.write_text(
+                json.dumps(bundle, indent=2, ensure_ascii=False) + "\n",
+                encoding="utf-8",
+            )
         else:
             adapter.export_to_directory(out)
 
@@ -597,7 +641,9 @@ def main() -> int:
     print("Letta (MemGPT) -> Memanto OKF Migration")
     print("=" * 60)
     print(f"Source file:       {args.source}")
-    print(f"Agent:             {bundle['agent'].get('name') or bundle['agent'].get('id') or 'N/A'}")
+    print(
+        f"Agent:             {bundle['agent'].get('name') or bundle['agent'].get('id') or 'N/A'}"
+    )
     print(f"Core tags:         {', '.join(bundle['core_memory_tags'])}")
     print(f"Total documents:   {summary['total_documents']}")
     print(f"  - Archival:      {summary['archival_count']}")
@@ -616,7 +662,10 @@ def main() -> int:
     if args.out:
         if args.out.suffix.lower() == ".json":
             args.out.parent.mkdir(parents=True, exist_ok=True)
-            args.out.write_text(json.dumps(bundle, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+            args.out.write_text(
+                json.dumps(bundle, indent=2, ensure_ascii=False) + "\n",
+                encoding="utf-8",
+            )
             print(f"\nWritten OKF JSON bundle to: {args.out}")
         else:
             adapter.export_to_directory(args.out)
