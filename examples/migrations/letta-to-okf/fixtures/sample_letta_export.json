@@ -1,0 +1,103 @@
+{
+  "exported_at": "2026-09-25T14:30:00Z",
+  "api_base": "https://api.letta.com",
+  "export_mode": "agent_snapshot",
+  "agent": {
+    "id": "agent-letta-7f9a1b2c",
+    "name": "devops-samantha",
+    "description": "Autonomous DevOps & Kubernetes reliability copilot",
+    "created_at": "2026-06-15T09:30:00Z",
+    "system": "You are a persistent autonomous copilot with stateful archival and recall memory."
+  },
+  "core_memory": {
+    "human": "User is Alex Rivera, Principal Cloud Architect at FinTech Global. Alex manages multi-tenant Kubernetes clusters, prefers Python, Go, and Terraform, enforces strict mutual TLS, and operates out of US-East (N. Virginia).",
+    "persona": "I am Samantha, an expert autonomous DevOps & Cloud Architecture copilot. I provide concise, production-tested recommendations, prioritize zero-downtime migrations, and maintain explicit provenance across all infrastructure actions.",
+    "blocks": [
+      {
+        "name": "human",
+        "label": "User Profile",
+        "value": "User is Alex Rivera, Principal Cloud Architect at FinTech Global. Alex manages multi-tenant Kubernetes clusters, prefers Python, Go, and Terraform, enforces strict mutual TLS, and operates out of US-East (N. Virginia)."
+      },
+      {
+        "name": "persona",
+        "label": "Agent Persona",
+        "value": "I am Samantha, an expert autonomous DevOps & Cloud Architecture copilot. I provide concise, production-tested recommendations, prioritize zero-downtime migrations, and maintain explicit provenance across all infrastructure actions."
+      },
+      {
+        "name": "guidelines",
+        "label": "Operational Guidelines",
+        "value": "Never run destructive database migrations without verified read-replica snapshots and an automated rollback hook."
+      }
+    ]
+  },
+  "passages": [
+    {
+      "id": "passage-8f2c3d4e-1a2b-4c5d-6e7f-8a9b0c1d2e3f",
+      "text": "For Kubernetes zero-downtime rollouts, configure maxSurge=25% and maxUnavailable=0 in Deployment specs. Ensure readiness probes have at least a 10s initial delay and 5s timeout to avoid dropping active in-flight requests during pod lifecycle transitions.",
+      "tags": ["kubernetes", "deployments", "zero-downtime", "reliability"],
+      "created_at": "2026-07-02T10:15:30Z",
+      "metadata": {
+        "source": "infrastructure-runbook",
+        "author": "alex.rivera",
+        "verified": true,
+        "section": "2.4"
+      }
+    },
+    {
+      "id": "passage-9a3b4c5d-2b3c-4d5e-7f8a-9b0c1d2e3f4a",
+      "text": "PostgreSQL connection pooling configuration: set PgBouncer pool_mode to transaction mode. Each application replica maintains max 20 connections to PgBouncer, which routes through 50 persistent server connections to the primary AWS RDS PostgreSQL 16 cluster.",
+      "tags": ["database", "postgres", "pgbouncer", "performance"],
+      "created_at": "2026-07-18T16:45:00Z",
+      "metadata": {
+        "source": "db-architecture-doc",
+        "cluster": "prod-us-east-1",
+        "tier": "mission-critical"
+      }
+    },
+    {
+      "id": "passage-0b1c2d3e-3c4d-5e6f-8a9b-0c1d2e3f4a5b",
+      "text": "Vault dynamic database credentials rotate every 60 minutes with a max lease TTL of 4 hours. Microservices renew leases at 50% TTL interval using the Vault agent sidecar injector.",
+      "tags": ["security", "vault", "secrets", "compliance"],
+      "created_at": "2026-08-05T11:20:15Z",
+      "metadata": {
+        "source": "infosec-baseline-2026",
+        "compliance": ["SOC2", "ISO27001"]
+      }
+    },
+    {
+      "id": "passage-1c2d3e4f-4d5e-6f7a-9b0c-1d2e3f4a5b6c",
+      "text": "Prometheus alerting threshold for memory leaks: trigger PagerDuty High alert when container_memory_working_set_bytes exceeds 85% of limit for 15 consecutive minutes, accompanied by container_memory_failures_total rate > 0.",
+      "tags": ["monitoring", "prometheus", "alerting", "sre"],
+      "created_at": "2026-08-22T08:05:45Z",
+      "metadata": {
+        "source": "alerting-rules-v2",
+        "pagerduty_service": "prod-core-infrastructure"
+      }
+    }
+  ],
+  "recall_memory": [
+    {
+      "id": "msg-001",
+      "role": "user",
+      "text": "Samantha, what is our approved command to roll back a failing Helm release in production staging?",
+      "created_at": "2026-09-10T14:02:11Z"
+    },
+    {
+      "id": "msg-002",
+      "role": "assistant",
+      "text": "Use `helm rollback <release-name> <revision-number> --namespace <ns> --wait --timeout 5m`. Always verify pod readiness status immediately afterwards with `kubectl rollout status deployment/<deployment-name>`.",
+      "created_at": "2026-09-10T14:02:45Z"
+    },
+    {
+      "id": "msg-003",
+      "role": "user",
+      "text": "Understood. We just verified revision 4 rollback successfully on cluster prod-east-2.",
+      "created_at": "2026-09-10T14:08:19Z"
+    }
+  ],
+  "meta": {
+    "archival_count": 4,
+    "recall_count": 3,
+    "core_blocks_count": 3
+  }
+}
